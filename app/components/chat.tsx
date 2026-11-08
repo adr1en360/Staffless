@@ -36,6 +36,8 @@ export function Chat() {
   const reduce = useReducedMotion();
 
   useEffect(() => {
+    // Only follow the conversation once there is one; scrolling on an empty chat jumps the page on load.
+    if (items.length === 0 && !thinking) return;
     end.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
   }, [items, thinking, reduce]);
 

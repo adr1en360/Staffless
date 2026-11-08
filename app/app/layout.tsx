@@ -16,7 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-[100dvh] font-sans">
         <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
+          <Link href="/" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight">
+            {/* eslint-disable-next-line @next/next/no-img-element -- tiny static SVG, next/image adds nothing */}
+            <img src="/icon.svg" alt="" width={28} height={28} />
             Staffless
           </Link>
           <nav className="flex items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400">

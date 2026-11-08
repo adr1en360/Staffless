@@ -1,1 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#059669"/><text x="16" y="22.5" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="700" fill="#fafafa">S</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <clipPath id="tile"><rect width="32" height="32" rx="8"/></clipPath>
+  <rect width="32" height="32" rx="8" fill="#059669"/>
+  <g clip-path="url(#tile)">
+    <!-- Jacket: the lapels open into a V -->
+    <path d="M3.8 33 6.4 21.4Q7.3 17.9 11.6 16.9L16 25.2 20.4 16.9Q24.7 17.9 25.6 21.4L28.2 33Z" fill="#fafafa"/>
+    <!-- Tie -->
+    <path d="M14.9 17.2h2.2l-.5 1.6.9 4.8L16 25.4l-1.5-1.8.9-4.8Z" fill="#18181b"/>
+  </g>
+  <!-- An exclamation mark where the head would be -->
+  <rect x="14.6" y="3.2" width="2.8" height="7.6" rx="1.4" fill="#fafafa"/>
+  <circle cx="16" cy="13.6" r="1.6" fill="#fafafa"/>
+</svg>
