@@ -21,12 +21,12 @@ const result = await checkout(quote.orderId, quote.text, quote.language);
 if (!result.ok) fail(`checkout: ${result.error}`);
 tx("Customer paid", result.payTx);
 for (const a of result.receipt.attempts) {
-  info(`${a.supplier}: quoted ${formatNear(a.quotedYocto, 6)} NEAR -> ${a.outcome}`);
-  if (a.counter) info(`  counter: ${a.counter.reason} (${a.counter.accepted ? "accepted" : "rejected"})`);
+  info(`${a.supplier}: quoted ${formatNear(a.quotedYocto, 6)} NEAR, the AI offered ${formatNear(a.offeredYocto, 6)} -> ${a.outcome}`);
+  info(`  why: ${a.reason}`);
   if (a.review) info(`  review: ${a.review.score}/10, ${a.review.reason}`);
 }
 const delivered = result.receipt.delivered;
-if (!delivered) fail("no supplier delivered; the customer was refunded");
+if (!delivered) fail(`no supplier delivered (${result.receipt.stopped ?? "all attempts failed"}); the customer was refunded`);
 tx(`Supplier paid ${formatNear(delivered.paidYocto, 6)} NEAR`, delivered.tx);
 tx(`AI cost booked: ${result.receipt.cost?.ok ? "ok" : result.receipt.cost?.error}`, result.receipt.cost?.hash);
 info(`Translation: ${delivered.translation}`);

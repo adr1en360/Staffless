@@ -28,7 +28,7 @@ One order, start to finish:
 
 1. A person chats with the shopkeeper (an AI on NEAR AI Cloud, model GLM 5.3 Flash) and gets a quote, registered on-chain with a hash of the text.
 2. The person pays the exact quote. The app checks the text still matches the on-chain hash.
-3. The shopkeeper gets quotes from two translator agents, each with its own NEAR account. A specialist goes first for Yoruba, Igbo, Hausa and Pidgin. A quote above budget (60% of the sale) gets one counter-offer, then the shop accepts or walks away.
+3. The shopkeeper AI sees both translators' quotes and specialties, picks one, makes an offer (their quote, or a counter) and says why. Code caps the offer at the quote and at 60% of the sale. Each translator gets one offer; a declined offer goes back to the AI to choose again.
 4. An AI reviewer scores the translation. The supplier is paid only if it scores 7/10 or higher. If no supplier passes, the customer is refunded.
 5. The AI cost is booked on-chain, and anyone can trigger the payout.
 

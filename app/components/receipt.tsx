@@ -19,19 +19,21 @@ export function ReceiptView({ result }: { result: Checkout }) {
         <p className="text-lg leading-relaxed">{delivered.translation}</p>
       ) : (
         <p className="text-sm">
-          No translator passed review, so the shop refunded you
-          {receipt.refund?.ok ? "." : `, but the refund failed: ${receipt.refund?.error}`}
+          {receipt.stopped ? `The shop decided not to hire anyone: ${receipt.stopped}` : "No translator passed review."} You were
+          refunded{receipt.refund?.ok ? "." : `, but the refund failed: ${receipt.refund?.error}`}
         </p>
       )}
 
-      <ul className="mt-5 space-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+      <ul className="mt-5 space-y-3 border-t border-zinc-100 pt-4 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
         {receipt.attempts.map((a) => (
           <li key={a.supplier}>
             <span className="text-zinc-900 dark:text-zinc-100">{a.supplier}</span> quoted{" "}
-            <span className="font-mono">{formatNear(a.quotedYocto, 6)}</span> NEAR.{" "}
-            {a.counter && (a.counter.accepted ? "The shop countered and they accepted. " : "The shop countered and they said no. ")}
-            {a.review && `Review: ${a.review.score}/10, ${a.review.reason}`}
+            <span className="font-mono">{formatNear(a.quotedYocto, 6)}</span> NEAR. The AI offered{" "}
+            <span className="font-mono">{formatNear(a.offeredYocto, 6)}</span>
+            {a.outcome === "offer-declined" ? " and they said no." : "."}
+            {a.review && ` Review: ${a.review.score}/10, ${a.review.reason}`}
             {a.outcome === "payment-failed" && ` Payment blocked: ${a.error}`}
+            {a.reason && <span className="mt-1 block text-zinc-500">Why: {a.reason}</span>}
           </li>
         ))}
       </ul>

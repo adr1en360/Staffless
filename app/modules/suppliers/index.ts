@@ -41,7 +41,6 @@ export const quote = (s: Supplier, wordCount: number) => s.perWordYocto * BigInt
 export const acceptsCounter = (s: Supplier, offeredYocto: bigint, wordCount: number) =>
   offeredYocto >= s.minPerWordYocto * BigInt(wordCount);
 
-export const isSpecialist = (s: Supplier, language: string) => s.specialties.includes(language.trim().toLowerCase());
 
 export async function translate(s: Supplier, text: string, language: string) {
   const { message, costYocto } = await chat([
