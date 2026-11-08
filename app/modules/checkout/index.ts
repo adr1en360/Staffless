@@ -1,30 +1,29 @@
 // A customer pays for a quoted order, then the shop fulfils it.
 import { createHash } from "node:crypto";
-import { accountId, call, view, type TxResult } from "../../lib/near";
+import { accountId } from "../../lib/near";
+import { contract, type Order } from "../../lib/store";
 import { fulfil as realFulfil, type Job, type Receipt } from "../procurement";
 
-export type Order = { customer: string; words: number; price: string; text_hash: number[]; status: string };
-
 export type Deps = {
-  order: (id: number) => Promise<Order | null>;
+  order: typeof contract.order;
   maxRefund: () => Promise<bigint>;
   customer: () => string;
-  pay: (id: number, priceYocto: bigint) => Promise<TxResult<unknown>>;
+  pay: typeof contract.pay;
   fulfil: (job: Job) => Promise<Receipt>;
 };
 
 export const realDeps = (): Deps => ({
-  order: (id) => view<Order | null>("get_order", { order_id: id }),
-  maxRefund: async () => BigInt((await view<{ max_refund: string }>("get_rules")).max_refund),
+  order: contract.order,
+  maxRefund: async () => BigInt((await contract.rules()).max_refund),
   customer: () => accountId("guest"),
-  pay: (id, price) => call("guest", "pay", { order_id: id }, price),
+  pay: contract.pay,
   fulfil: realFulfil,
 });
 
 export type Checkout = { ok: true; payTx: string; receipt: Receipt } | { ok: false; error: string; payTx?: string };
 
 /** The text must hash to what the shopkeeper quoted on-chain, so nobody can swap in a longer text after pricing. */
-export const sameText = (text: string, hash: number[]) =>
+export const sameText = (text: string, hash: Order["text_hash"]) =>
   createHash("sha256").update(text).digest().equals(Buffer.from(hash));
 
 export async function checkout(orderId: number, text: string, language: string, deps: Deps = realDeps()): Promise<Checkout> {

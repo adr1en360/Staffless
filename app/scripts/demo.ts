@@ -1,5 +1,5 @@
 // One full loop on testnet: chat quote -> customer pays -> supplier hired and checked -> supplier paid -> payout.
-import { call, view } from "../lib/near";
+import { contract } from "../lib/store";
 import { formatNear } from "../lib/money";
 import { reply } from "../modules/shopkeeper";
 import { checkout } from "../modules/checkout";
@@ -32,10 +32,10 @@ tx(`AI cost booked: ${result.receipt.cost?.ok ? "ok" : result.receipt.cost?.erro
 info(`Translation: ${delivered.translation}`);
 
 step("3. Payout: profit above the reserve is split between owner and contributor");
-const payout = await call("guest", "payout", {});
+const payout = await contract.payout();
 if (!payout.ok) fail(`payout: ${payout.error}`);
 tx("Payout sent", payout.hash);
-const summary = await view<{ treasury: string; spend_today: string }>("get_summary");
+const summary = await contract.summary();
 info(`Treasury now ${formatNear(summary.treasury, 6)} NEAR (the reserve); spent today ${formatNear(summary.spend_today, 6)} NEAR`);
 
 done("Full loop complete.");

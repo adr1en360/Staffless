@@ -16,7 +16,7 @@ function deps(over: Partial<Deps> = {}): Deps & { paid: string[] } {
     suppliers: [A, B],
     translate: async (s) => ({ translation: `by ${s.id}`, costYocto: 1n }),
     review: async () => ({ pass: true, score: 9, reason: "good", costYocto: 1n }),
-    paySupplier: async (s, amount) => (paid.push(`${s.id}:${amount / N}`), ok("pay")),
+    paySupplier: async (account, amount) => (paid.push(`${account}:${amount / N}`), ok("pay")),
     recordCost: async () => ok("cost"),
     refund: async () => ok("refund"),
     ...over,
@@ -32,20 +32,20 @@ test("specialist goes first for its language", () => {
   assert.deepEqual(shortlist([A, B], "French").map((s) => s.id), ["a", "b"]);
 });
 
-test("a quote within plan is accepted without a counter", () => {
-  const deal = negotiate(A, 2, 200n * N); // A quotes 100
+test("a quote within budget is accepted without a counter", () => {
+  const deal = negotiate(A, 2, 400n * N); // budget 240, A quotes 100
   assert.equal(deal.counter, undefined);
   assert.equal(deal.agreedYocto, (100n * N).toString());
 });
 
-test("a quote above plan gets one counter at the plan price", () => {
-  const deal = negotiate(B, 2, 160n * N); // B quotes 180, min 140
+test("a quote above budget gets one counter at the budget", () => {
+  const deal = negotiate(B, 2, 250n * N); // budget 150, B quotes 180, min 140
   assert.equal(deal.counter?.accepted, true);
-  assert.equal(deal.agreedYocto, (160n * N).toString());
+  assert.equal(deal.agreedYocto, (150n * N).toString());
 });
 
 test("a counter below the supplier's minimum means walking away", () => {
-  const deal = negotiate(B, 2, 100n * N); // min 140
+  const deal = negotiate(B, 2, 200n * N); // budget 120, min 140
   assert.equal(deal.counter?.accepted, false);
   assert.equal(deal.agreedYocto, undefined);
 });
@@ -54,7 +54,7 @@ test("delivers and pays the supplier once the review passes", async () => {
   const d = deps();
   const r = await fulfil(job("one two", "French", 400n), d); // plan 240, A quotes 100
   assert.equal(r.delivered?.translation, "by a");
-  assert.deepEqual(d.paid, ["a:100"]);
+  assert.deepEqual(d.paid, ["a.t:100"]);
   assert.equal(r.refund, undefined);
   assert.equal(r.cost?.ok, true);
 });

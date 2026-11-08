@@ -1,7 +1,8 @@
-import { beforeEach, test } from "node:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
 import { KeyPair } from "near-api-js";
-import { buy, resetServed, settle, type Deps, type Tab } from "./index";
+import { createTabs, type Deps } from "./index";
+import type { Tab } from "../../lib/store";
 import { signVoucher, verifyVoucher, voucherMessage } from "./voucher";
 
 const key = KeyPair.fromRandom("ed25519");
@@ -28,8 +29,6 @@ const voucher = (cumulative: bigint, signer = secret) => ({
   signature: signVoucher(signer, voucherMessage("store.t", "agent.t", cumulative)),
 });
 
-beforeEach(resetServed);
-
 test("voucher signatures verify, and fail for another message", () => {
   const sig = signVoucher(secret, "a");
   assert.equal(verifyVoucher(key.getPublicKey().toString(), "a", sig), true);
@@ -37,31 +36,31 @@ test("voucher signatures verify, and fail for another message", () => {
 });
 
 test("serves each purchase whose voucher adds exactly its price", async () => {
-  const d = deps(tab());
-  const first = await buy(voucher(4n), d); // 2 words x 2
-  const second = await buy(voucher(8n), d);
+  const { buy } = createTabs(deps(tab()));
+  const first = await buy(voucher(4n)); // 2 words x 2
+  const second = await buy(voucher(8n));
   assert.equal(first.ok && first.translation, "fr:hello there");
   assert.equal(second.ok && second.cumulativeYocto, "8");
 });
 
 test("rejects a voucher that pays too little or reuses the last total", async () => {
-  const d = deps(tab());
-  assert.equal((await buy(voucher(3n), d)).ok, false);
-  await buy(voucher(4n), d);
-  assert.equal((await buy(voucher(4n), d)).ok, false);
+  const { buy } = createTabs(deps(tab()));
+  assert.equal((await buy(voucher(3n))).ok, false);
+  await buy(voucher(4n));
+  assert.equal((await buy(voucher(4n))).ok, false);
 });
 
 test("rejects a forged voucher and an overdrawn tab", async () => {
   const forger = KeyPair.fromRandom("ed25519").toString();
-  assert.deepEqual(await buy(voucher(4n, forger), deps(tab())), { ok: false, error: "bad voucher signature" });
-  assert.deepEqual(await buy(voucher(4n), deps(tab({ balance: "3" }))), { ok: false, error: "tab underfunded" });
+  assert.deepEqual(await createTabs(deps(tab())).buy(voucher(4n, forger)), { ok: false, error: "bad voucher signature" });
+  assert.deepEqual(await createTabs(deps(tab({ balance: "3" }))).buy(voucher(4n)), { ok: false, error: "tab underfunded" });
 });
 
 test("settles once with the latest voucher", async () => {
   const settled: bigint[] = [];
-  const d = deps(tab(), settled);
-  await buy(voucher(4n), d);
-  await buy(voucher(8n), d);
-  assert.equal((await settle("agent.t", d)).ok, true);
+  const desk = createTabs(deps(tab(), settled));
+  await desk.buy(voucher(4n));
+  await desk.buy(voucher(8n));
+  assert.equal((await desk.settle("agent.t")).ok, true);
   assert.deepEqual(settled, [8n]);
 });

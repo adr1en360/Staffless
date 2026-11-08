@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Prohibit, Scales, ShieldCheck } from "@phosphor-icons/react/ssr";
-import { view } from "../lib/near";
+import { contract } from "../lib/store";
 import { formatNear } from "../lib/money";
 import { Chat } from "../components/chat";
 
 export const dynamic = "force-dynamic";
 
 export default async function ShopPage() {
-  const rules = await view<{ floor_per_word: string; list_per_word: string }>("get_rules");
+  const rules = await contract.rules();
   const floor = formatNear(rules.floor_per_word, 6);
   const list = formatNear(rules.list_per_word, 6);
 

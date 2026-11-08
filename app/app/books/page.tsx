@@ -1,4 +1,5 @@
 import { books } from "../../modules/books";
+import { store as storeId } from "../../lib/near";
 import { formatNear } from "../../lib/money";
 import { explorerAccount, explorerBlock } from "../../lib/links";
 import { PayoutButton } from "../../components/payout-button";
@@ -20,7 +21,7 @@ const near = (yocto: string) => formatNear(yocto, 6);
 
 export default async function BooksPage() {
   const { summary, rules, suppliers, ledger } = await books();
-  const store = process.env.STORE_CONTRACT_ID ?? "";
+  const store = storeId();
 
   const stats = [
     { label: "Treasury", value: `${near(summary.treasury)} NEAR` },

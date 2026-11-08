@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { checkout, type Deps, type Order } from "./index";
+import { checkout, type Deps } from "./index";
+import type { Order } from "../../lib/store";
 
 const hashOf = (t: string) => [...createHash("sha256").update(t).digest()];
 const order = (over: Partial<Order> = {}): Order => ({

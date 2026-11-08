@@ -1,8 +1,9 @@
 // An AI support bot buys translations sentence by sentence from a prepaid tab: many purchases, two transactions.
 import { KeyPair, type KeyPairString } from "near-api-js";
-import { accountId, call, env, store, view } from "../lib/near";
-import { formatNear, toYocto } from "../lib/money";
-import { buy, settle, type Tab } from "../modules/tabs";
+import { accountId, env, store } from "../lib/near";
+import { contract } from "../lib/store";
+import { formatNear, toYocto, words } from "../lib/money";
+import { tabs } from "../modules/tabs";
 import { signVoucher, voucherMessage } from "../modules/tabs/voucher";
 import { done, fail, info, step, tx } from "./log";
 
@@ -24,31 +25,33 @@ const publicKey = KeyPair.fromString(secret as KeyPairString).getPublicKey().toS
 const hashes: string[] = [];
 
 step(`1. The support bot opens a tab with ${formatNear(DEPOSIT)} NEAR (transaction 1)`);
-const opened = await call("agent", "open_tab", { public_key: publicKey }, DEPOSIT);
+const opened = await contract.openTab(publicKey, DEPOSIT);
 if (!opened.ok) fail(`open_tab: ${opened.error}`);
 hashes.push(opened.hash);
 tx("Tab opened", opened.hash);
 
-const tab = await view<Tab>("get_tab", { customer });
+const tab = await contract.tab(customer);
+if (!tab) fail("tab not found after opening");
 let cumulative = BigInt(tab.settled);
-const perWord = BigInt((await view<{ list_per_word: string }>("get_rules")).list_per_word);
+const perWord = BigInt((await contract.rules()).list_per_word);
 
 step(`2. It buys ${SENTENCES.length} translations, signing a voucher for each (no transactions)`);
 for (const [i, text] of SENTENCES.entries()) {
-  cumulative += perWord * BigInt(text.trim().split(/\s+/).length);
+  cumulative += perWord * BigInt(words(text));
   const signature = signVoucher(secret, voucherMessage(store(), customer, cumulative));
-  const res = await buy({ customer, text, language: LANGUAGE, cumulativeYocto: cumulative.toString(), signature });
+  const res = await tabs().buy({ customer, text, language: LANGUAGE, cumulativeYocto: cumulative.toString(), signature });
   if (!res.ok) fail(`purchase ${i + 1}: ${res.error}`);
   if (res.settleTx) hashes.push(res.settleTx);
   info(`${String(i + 1).padStart(2)}. ${formatNear(res.priceYocto, 6)} NEAR  "${text}" -> "${res.translation}"`);
 }
 
 step("3. The shop collects everything with the latest voucher (transaction 2)");
-const settled = await settle(customer);
+const settled = await tabs().settle(customer);
 if (!settled.ok) fail(`settle: ${settled.error}`);
 hashes.push(settled.hash);
 tx("Settled", settled.hash);
-const after = await view<Tab>("get_tab", { customer });
+const after = await contract.tab(customer);
+if (!after) fail("tab disappeared");
 info(`Tab: ${formatNear(after.settled, 6)} NEAR paid in total, ${formatNear(after.balance, 6)} NEAR left on deposit`);
 
 done(`${SENTENCES.length} purchases, ${hashes.length} transactions.`);
