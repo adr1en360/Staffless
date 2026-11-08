@@ -6,6 +6,7 @@ import * as supplierLib from "../suppliers";
 import type { Supplier } from "../suppliers";
 import { decide as realDecide, type Decision, type Situation } from "./decide";
 import { review as realReview, type Review } from "./review";
+import { costMemo, declinedNote, failedNote, loadTracks, payMemo, summarize, type Track } from "./memory";
 
 export type Job = { orderId: number; text: string; language: string; priceYocto: bigint; maxRefundYocto: bigint };
 
@@ -33,6 +34,7 @@ export type Receipt = {
 export type Deps = {
   suppliers: Supplier[];
   decide: (s: Situation) => Promise<Decision>;
+  history: () => Promise<Map<string, Track>>;
   translate: (s: Supplier, text: string, language: string) => Promise<{ translation: string; costYocto: bigint }>;
   review: (text: string, language: string, translation: string) => Promise<Review>;
   paySupplier: typeof contract.paySupplier;
@@ -46,6 +48,7 @@ export const BUDGET_BPS = 6_000;
 export const realDeps = (): Deps => ({
   suppliers: supplierLib.suppliers(),
   decide: realDecide,
+  history: loadTracks,
   translate: supplierLib.translate,
   review: realReview,
   paySupplier: contract.paySupplier,
@@ -60,6 +63,9 @@ export async function fulfil(job: Job, deps: Deps = realDeps()): Promise<Receipt
   const budget = bps(job.priceYocto, BUDGET_BPS);
   const receipt: Receipt = { orderId: job.orderId, attempts: [] };
   const remaining = [...deps.suppliers];
+  // Memory is a help, not a requirement: if the ledger can't be read, decide without it.
+  const tracks = await deps.history().catch(() => new Map<string, Track>());
+  const notes: string[] = []; // unpaid attempts, written into the AI-cost note so the next decision can learn from them
   let aiCost = 0n;
 
   // One offer per supplier; the AI sees every earlier outcome before choosing again.
@@ -69,7 +75,13 @@ export async function fulfil(job: Job, deps: Deps = realDeps()): Promise<Receipt
       language: job.language,
       saleYocto: job.priceYocto,
       budgetYocto: budget,
-      options: remaining.map((s) => ({ id: s.id, name: s.name, specialties: s.specialties, quoteYocto: supplierLib.quote(s, wordCount) })),
+      options: remaining.map((s) => ({
+        id: s.id,
+        name: s.name,
+        specialties: s.specialties,
+        quoteYocto: supplierLib.quote(s, wordCount),
+        track: summarize(tracks.get(s.account), job.language),
+      })),
       tried: receipt.attempts.map((a) => ({ supplier: a.supplier, offeredYocto: BigInt(a.offeredYocto), outcome: a.outcome })),
     });
     aiCost += decision.costYocto;
@@ -91,7 +103,10 @@ export async function fulfil(job: Job, deps: Deps = realDeps()): Promise<Receipt
       outcome: "offer-declined",
     };
     receipt.attempts.push(attempt);
-    if (!supplierLib.acceptsCounter(s, offered, wordCount)) continue;
+    if (!supplierLib.acceptsCounter(s, offered, wordCount)) {
+      notes.push(declinedNote(s.account, offered / BigInt(wordCount)));
+      continue;
+    }
 
     const { translation, costYocto } = await deps.translate(s, job.text, job.language);
     const check = await deps.review(job.text, job.language, translation);
@@ -99,10 +114,11 @@ export async function fulfil(job: Job, deps: Deps = realDeps()): Promise<Receipt
     attempt.review = { pass: check.pass, score: check.score, reason: check.reason };
     if (!check.pass) {
       attempt.outcome = "failed-review";
+      notes.push(failedNote(s.account, check.score, job.language));
       continue;
     }
 
-    const paid = await deps.paySupplier(s.account, offered, `order ${job.orderId}`);
+    const paid = await deps.paySupplier(s.account, offered, payMemo(job.orderId, job.language, wordCount, check.score));
     if (!paid.ok) {
       Object.assign(attempt, { outcome: "payment-failed", error: paid.error });
       break;
@@ -112,6 +128,6 @@ export async function fulfil(job: Job, deps: Deps = realDeps()): Promise<Receipt
   }
 
   if (!receipt.delivered) receipt.refund = await deps.refund(job.orderId, min(job.priceYocto, job.maxRefundYocto));
-  if (aiCost > 0n) receipt.cost = await deps.recordCost(aiCost, `order ${job.orderId}`);
+  if (aiCost > 0n) receipt.cost = await deps.recordCost(aiCost, costMemo(job.orderId, notes));
   return receipt;
 }

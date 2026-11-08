@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { fulfil, type Deps } from "./index";
 import { parseDecision, type Decision, type Situation } from "./decide";
 import { parseReview } from "./review";
+import { readTracks, type Track } from "./memory";
 import type { Supplier } from "../suppliers";
 
 const N = 10n ** 18n; // keeps numbers readable
@@ -13,6 +14,7 @@ const ok = (hash = "tx") => ({ ok: true as const, value: undefined, hash });
 /** A scripted AI: returns the given decisions in order and records what it was shown. */
 function deps(decisions: Array<[string | null, bigint]>, over: Partial<Deps> = {}) {
   const paid: string[] = [];
+  const memos: string[] = [];
   const seen: Situation[] = [];
   let i = 0;
   const d: Deps = {
@@ -22,14 +24,15 @@ function deps(decisions: Array<[string | null, bigint]>, over: Partial<Deps> = {
       const [supplierId, offer] = decisions[i++] ?? [null, 0n];
       return { supplierId, offerYocto: offer * N, reason: "because", costYocto: 1n };
     },
+    history: async () => new Map<string, Track>(),
     translate: async (s) => ({ translation: `by ${s.id}`, costYocto: 1n }),
     review: async () => ({ pass: true, score: 9, reason: "good", costYocto: 1n }),
-    paySupplier: async (account, amount) => (paid.push(`${account}:${amount / N}`), ok("pay")),
-    recordCost: async () => ok("cost"),
+    paySupplier: async (account, amount, memo) => (paid.push(`${account}:${amount / N}`), memos.push(memo), ok("pay")),
+    recordCost: async (_amount, memo) => (memos.push(memo), ok("cost")),
     refund: async () => ok("refund"),
     ...over,
   };
-  return { d, paid, seen };
+  return { d, paid, memos, seen };
 }
 
 // 2 words: A quotes 100 (min 80), B quotes 180 (min 140). Sale 400 means a budget of 240.
@@ -105,4 +108,35 @@ test("review parsing fails closed on bad JSON", () => {
   assert.equal(parseReview("not json", 0n).pass, false);
   assert.equal(parseReview('{"score": 8, "reason": "fine"}', 0n).pass, true);
   assert.equal(parseReview('{"score": 6, "reason": "meh"}', 0n).pass, false);
+});
+
+test("the AI sees each supplier's track record, read from the ledger", async () => {
+  const history = readTracks([
+    { kind: "Cost", account: "owner.t", amount: "1", memo: "order 9; b.t failed review 3/10 on yoruba", block: 1 },
+    { kind: "Supplier", account: "a.t", amount: (100n * N).toString(), memo: "order 9, yoruba, 2 words, review 9/10", block: 2 },
+  ]);
+  const { d, seen } = deps([["a", 100n]], { history: async () => history });
+  await fulfil(job(400n), d);
+  const [a, b] = ["a", "b"].map((id) => seen[0].options.find((o) => o.id === id)?.track);
+  assert.deepEqual([a?.paid_jobs, a?.average_score_for_this_language], [1, 9]);
+  assert.deepEqual([b?.failed_reviews, b?.average_score_for_this_language], [1, 3]);
+});
+
+test("payment and cost notes record what the next decision needs", async () => {
+  const { d, memos } = deps([["b", 100n], ["a", 100n]]); // B declines 100 (min 140); A is paid
+  await fulfil(job(400n), d);
+  assert.deepEqual(memos, ["order 1, yoruba, 2 words, review 9/10", "order 1; b.t declined 0.00005/word"]);
+  const tracks = readTracks([
+    { kind: "Supplier", account: "a.t", amount: (100n * N).toString(), memo: memos[0], block: 1 },
+    { kind: "Cost", account: "owner.t", amount: "1", memo: memos[1], block: 2 },
+  ]);
+  assert.deepEqual(tracks.get("b.t")?.declinedPerWord, [50n * N]);
+  assert.equal(tracks.get("a.t")?.scores[0].score, 9);
+});
+
+test("an unreadable ledger doesn't stop the order", async () => {
+  const { d, paid } = deps([["a", 100n]], { history: async () => { throw new Error("rpc down"); } });
+  const r = await fulfil(job(400n), d);
+  assert.equal(r.delivered?.supplier, "A");
+  assert.deepEqual(paid, ["a.t:100"]);
 });

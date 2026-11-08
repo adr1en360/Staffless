@@ -28,9 +28,11 @@ One order, start to finish:
 
 1. A person chats with the shopkeeper (an AI on NEAR AI Cloud, model GLM 5.3 Flash) and gets a quote, registered on-chain with a hash of the text.
 2. The person pays the exact quote. The app checks the text still matches the on-chain hash.
-3. The shopkeeper AI sees both translators' quotes and specialties, picks one, makes an offer (their quote, or a counter) and says why. Code caps the offer at the quote and at 60% of the sale. Each translator gets one offer; a declined offer goes back to the AI to choose again.
+3. The shopkeeper AI sees both translators' quotes, specialties and **track records**, picks one, makes an offer (their quote, or a counter) and says why. Code caps the offer at the quote and at 60% of the sale. Each translator gets one offer; a declined offer goes back to the AI to choose again.
 4. An AI reviewer scores the translation. The supplier is paid only if it scores 7/10 or higher. If no supplier passes, the customer is refunded.
 5. The AI cost is booked on-chain, and anyone can trigger the payout.
+
+**Memory on the ledger.** The shopkeeper remembers how each translator performed, and that memory lives in the contract's public ledger notes. Each translator payment records the language and review score (`order 12, yoruba, 6 words, review 9/10`), and the AI-cost note records refused offers and failed reviews (`supplier-b... declined 0.00006/word`). Before every buying decision the shop reads the last 100 ledger entries back into a track record per translator. Anyone can check why the AI chose who it chose.
 
 AI agents buy differently. They open a prepaid **tab**, then sign a voucher for each sentence ("I owe the shop this much in total"). The shop checks each voucher's ed25519 signature off-chain and serves at once, then collects everything with one `settle_tab` transaction. The contract verifies the signature again, so the shop can't overcharge and a voucher can't be settled twice.
 
@@ -57,7 +59,7 @@ npm install
 npm test
 ```
 
-Expected: `pass 28, fail 0`. These cover the AI's buying decisions and the caps around them (it can't pay above the quote or budget, or pay an unknown supplier), refunds, the shopkeeper's tool loop, checkout's text-hash check, voucher checks and rate limits.
+Expected: `pass 35, fail 0`. These cover the AI's buying decisions and the caps around them (it can't pay above the quote or budget, or pay an unknown supplier), the ledger memory (notes written are notes read back), refunds, the shopkeeper's tool loop, checkout's text-hash check, voucher checks and rate limits.
 
 ### 3. Read the live contract (no keys needed)
 

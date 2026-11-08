@@ -1,8 +1,9 @@
 // The shopkeeper AI decides who to hire and what to offer. Code enforces the limits around that choice.
 import { chat } from "../../lib/ai";
 import { formatNear, fromNearNumber } from "../../lib/money";
+import type { TrackSummary } from "./memory";
 
-export type Option = { id: string; name: string; specialties: string[]; quoteYocto: bigint };
+export type Option = { id: string; name: string; specialties: string[]; quoteYocto: bigint; track: TrackSummary };
 export type Tried = { supplier: string; offeredYocto: bigint; outcome: string };
 export type Situation = {
   words: number;
@@ -27,13 +28,14 @@ export async function decide(s: Situation): Promise<Decision> {
           `You can pay at most ${near(s.budgetYocto)} NEAR; anything above that is cut to it. ` +
           "Pick one supplier and an offer. Offer their quote to accept it, or less to counter. Each supplier has a private minimum and refuses offers below it, and you only get one offer per supplier. " +
           "The work is reviewed before you pay and you pay nothing for work that fails, but a failure makes the waiting customer wait longer. " +
+          "Each supplier comes with its track record from the shop's public ledger: paid jobs, review scores overall and for this language, failed reviews, the lowest price per word it accepted, and offers per word it declined. Learn from it: favour suppliers that pass reviews for this language, and don't repeat offers they already refused. " +
           'Reply as JSON: {"supplier": "<id>", "offer_near": number, "reason": "one sentence"}, or {"supplier": null, "reason": "one sentence"} to buy from nobody and refund the customer.',
       },
       {
         role: "user",
         content: JSON.stringify({
           job: { words: s.words, language: s.language, sale_near: near(s.saleYocto), budget_near: near(s.budgetYocto) },
-          suppliers: s.options.map((o) => ({ id: o.id, name: o.name, specialties: o.specialties, quote_near: near(o.quoteYocto) })),
+          suppliers: s.options.map((o) => ({ id: o.id, name: o.name, specialties: o.specialties, quote_near: near(o.quoteYocto), track_record: o.track })),
           already_tried: s.tried.map((t) => ({ supplier: t.supplier, offered_near: near(t.offeredYocto), outcome: t.outcome })),
         }),
       },
