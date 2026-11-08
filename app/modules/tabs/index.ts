@@ -8,7 +8,7 @@ import { verifyVoucher, voucherMessage } from "./voucher";
 export type Purchase = { customer: string; text: string; language: string; cumulativeYocto: string; signature: string };
 
 export type Served =
-  | { ok: true; translation: string; priceYocto: string; cumulativeYocto: string; settleTx?: string }
+  | { ok: true; translation: string; priceYocto: string; cumulativeYocto: string }
   | { ok: false; error: string };
 
 export type Deps = {
@@ -20,8 +20,6 @@ export type Deps = {
 };
 
 export const MAX_SENTENCE_WORDS = 60;
-/** Unsettled amount at which the shop collects on-chain without waiting for the session to end. */
-export const SETTLE_AT_YOCTO = 100_000_000_000_000_000_000_000n; // 0.1 NEAR
 
 export const realDeps = (): Deps => ({
   store,
@@ -32,7 +30,9 @@ export const realDeps = (): Deps => ({
 });
 
 export function createTabs(deps: Deps = realDeps()) {
-  // shortcut: the last served voucher per customer lives in this process's memory; persist it before scaling out.
+  // shortcut: the last served voucher per customer lives in this process's memory, so a restart before settling loses
+  // up to the tab deposit; persist vouchers before running more than one process.
+  // The deposit caps what the shop serves, and close_delay gives it time to settle before a customer can leave.
   const served = new Map<string, { cumulative: bigint; signature: string }>();
 
   async function buy(p: Purchase): Promise<Served> {
@@ -56,12 +56,7 @@ export function createTabs(deps: Deps = realDeps()) {
 
     served.set(p.customer, { cumulative, signature: p.signature });
     const translation = await deps.translate(p.text, p.language);
-    let settleTx: string | undefined;
-    if (cumulative - BigInt(tab.settled) >= SETTLE_AT_YOCTO) {
-      const res = await deps.settle(p.customer, cumulative, p.signature);
-      if (res.ok) settleTx = res.hash;
-    }
-    return { ok: true, translation, priceYocto: price.toString(), cumulativeYocto: cumulative.toString(), settleTx };
+    return { ok: true, translation, priceYocto: price.toString(), cumulativeYocto: cumulative.toString() };
   }
 
   /** End of session: collect everything served so far with the latest voucher. */

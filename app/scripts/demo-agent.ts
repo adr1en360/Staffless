@@ -41,7 +41,6 @@ for (const [i, text] of SENTENCES.entries()) {
   const signature = signVoucher(secret, voucherMessage(store(), customer, cumulative));
   const res = await tabs().buy({ customer, text, language: LANGUAGE, cumulativeYocto: cumulative.toString(), signature });
   if (!res.ok) fail(`purchase ${i + 1}: ${res.error}`);
-  if (res.settleTx) hashes.push(res.settleTx);
   info(`${String(i + 1).padStart(2)}. ${formatNear(res.priceYocto, 6)} NEAR  "${text}" -> "${res.translation}"`);
 }
 

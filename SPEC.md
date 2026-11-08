@@ -54,7 +54,7 @@
 | The owner manages the rules with the NEAR CLI. No owner UI | Owner page |
 | Ledger kept in contract state (append-only) | Events + an indexer |
 | Inference cost is self-reported by the shopkeeper (NEAR AI bills off-chain), recorded once per order | Pay for inference on-chain |
-| The tab remainder below the settle threshold is lost if a customer abandons | Persist the latest voucher, and add a close-notice watcher |
+| The shop settles a tab at session end from vouchers held in process memory; a restart before settling loses the unsettled amount (capped by the deposit) | Persist the latest voucher |
 | Rate limit is in memory, per server instance | Shared store |
 | Suppliers are our own services | Third-party suppliers |
 
@@ -120,8 +120,6 @@ Function-call keys cannot attach deposits, so every shopkeeper method takes no d
 **API:**
 - `POST /api/chat`: shopkeeper LLM with tools `quote`, `refund`, `pay_supplier`. The contract is the authority.
 - `POST /api/pay`: the guest pays an order. Then procurement, QA, delivery.
-- `POST /api/tab/buy`: voucher + sentence in, translation out. Settles when unsettled ≥ threshold.
-- `POST /api/tab/settle`: final voucher at session end.
 - `POST /api/payout`
 - Suppliers run in-process (`modules/suppliers`), each with its own NEAR account and price list. shortcut: no supplier HTTP API; add one if outside suppliers join.
 

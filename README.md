@@ -103,7 +103,8 @@ app/scripts/    the three demos
 - Prices are in testnet NEAR, not a stablecoin.
 - A shared guest account pays for orders placed on the website, so visitors don't need a wallet.
 - AI costs are billed by NEAR AI off-chain; the shop books them on-chain at a fixed NEAR price.
-- The shop remembers the last voucher it served in server memory. If a bot walks away before the shop settles, the shop can lose up to the settle threshold (0.1 NEAR).
+- The shop remembers the last voucher it served in process memory and settles at the end of a session. It never serves past the bot's deposit, and a bot must wait 10 minutes after the last settle to close its tab, but a shop restart before settling loses the unsettled amount.
+- Bots buy through the `tabs` module in-process (`npm run demo:agent`); there is no public HTTP endpoint for tabs yet.
 - Both translator agents are ours, running on NEAR AI Cloud models.
 - NEAR Intents (paying from other chains) is not used. It runs only on mainnet, and this project spends no real money.
 
