@@ -33,7 +33,7 @@ function account(role: Role): Account {
 
 export const store = () => env("STORE_CONTRACT_ID");
 export const accountId = (role: Role) => env(KEYS[role][0]);
-export const explorerTx = (hash: string) => `https://testnet.nearblocks.io/txns/${hash}`;
+export { explorerTx } from "./links";
 
 export async function view<T>(method: string, args: Record<string, unknown> = {}): Promise<T> {
   return (await rpc().callFunction({ contractId: store(), method, args })) as T;

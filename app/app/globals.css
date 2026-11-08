@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* One accent (emerald) for actions and money in; rose only for things the contract blocked. */
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+}
+
+::selection {
+  @apply bg-emerald-200 text-zinc-900 dark:bg-emerald-800 dark:text-zinc-50;
+}
