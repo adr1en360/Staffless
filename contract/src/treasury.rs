@@ -60,7 +60,7 @@ impl Store {
     }
 
     /// Anyone can trigger it. Splits everything above the reserve.
-    pub fn payout(&mut self) -> Promise {
+    pub fn payout(&mut self) {
         self.assert_open();
         let total = self.treasury.saturating_sub(self.rules.reserve);
         require!(!total.is_zero(), "nothing above reserve");
@@ -70,7 +70,9 @@ impl Store {
         let (owner, contributor) = (self.owner.clone(), self.contributor.clone());
         self.log(Kind::Payout, contributor.clone(), to_contributor, "contributor share".into());
         self.log(Kind::Payout, owner.clone(), to_owner, "owner share".into());
-        Promise::new(contributor).transfer(to_contributor).and(Promise::new(owner).transfer(to_owner))
+        // Two independent transfers: NEAR does not allow returning a joint promise.
+        Promise::new(contributor).transfer(to_contributor).detach();
+        Promise::new(owner).transfer(to_owner).detach();
     }
 
     /// Owner only. Works even when frozen.
@@ -145,7 +147,7 @@ mod tests {
     fn payout_splits_above_reserve() {
         let mut s = store();
         paid_order(&mut s, 60, near(60));
-        let _ = s.payout(); // 60 - reserve 10 = 50; contributor 20% = 10, owner 40
+        s.payout(); // 60 - reserve 10 = 50; contributor 20% = 10, owner 40
         let ledger = s.get_ledger(0, 10);
         assert_eq!(s.get_summary().treasury, near(10));
         assert_eq!((ledger[1].kind, ledger[1].amount), (Kind::Payout, near(10)));
@@ -157,7 +159,7 @@ mod tests {
     fn payout_never_dips_below_reserve() {
         let mut s = store();
         paid_order(&mut s, 10, near(10));
-        let _ = s.payout();
+        s.payout();
     }
 
     #[test]
