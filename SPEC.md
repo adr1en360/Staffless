@@ -140,13 +140,26 @@ Function-call keys cannot attach deposits, so every shopkeeper method takes no d
 - `NEARAI_API_KEY`, `NEARAI_MODEL`
 - Scripts only: `AGENT_CUSTOMER_ACCOUNT_ID`, `AGENT_CUSTOMER_PRIVATE_KEY`
 
-### Layout
+### Stack
+
+Rust 1.86 + near-sdk 5 (cargo-near) · Next.js + TypeScript (Vercel free) · near-api-js · `openai` npm SDK pointed at NEAR AI Cloud (GLM 5.3 Flash; Qwen 3.8 backup) · tests: Rust unit tests, `node:test` · scripts: `tsx` · npm.
+
+### Layout (modular: one job per module, small public interface, own tests; routes hold no logic)
 
 ```
-contract/   Rust crate + unit tests
-app/        Next.js app, API routes, scripts
-README.md   for judges (written in Slice 5)
-SPEC.md  AGENTS.md  CLAUDE.md  LICENSE  .gitignore
+contract/src/
+  lib.rs        state + method wiring only
+  rules.rs      owner rules, freeze, supplier list
+  orders.rs     quote (floor check), pay, refund
+  tabs.rs       open, voucher verify + settle, close
+  treasury.rs   spend cap, record_cost, pay_supplier, payout, withdraw
+  ledger.rs     entries + views
+app/
+  lib/near.ts   the only place that reads chain or signs
+  lib/ai.ts     the only place that calls NEAR AI
+  modules/      shopkeeper/ procurement/ suppliers/ tabs/ books/  (each: index.ts + *.test.ts)
+  app/          pages + API routes (thin: parse, call module, respond)
+  scripts/      demo, demo-agent, demo-attacks
 ```
 
 ## Slices (one agent run each; audit first; stop and report on contradictions)
