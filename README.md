@@ -92,7 +92,7 @@ Open http://localhost:3000. Try: ask for a Yoruba translation and pay, then hagg
 
 ```
 contract/src/   lib.rs (state), rules.rs, orders.rs, tabs.rs, treasury.rs, ledger.rs
-app/lib/        near.ts (the only code that reads the chain or signs), ai.ts (the only code that calls the AI)
+app/lib/        store.ts (typed mirror of the contract), near.ts (RPC and signing), ai.ts (the only code that calls the AI)
 app/modules/    shopkeeper, procurement, suppliers, checkout, tabs, books
 app/app/        pages and API routes
 app/scripts/    the three demos
