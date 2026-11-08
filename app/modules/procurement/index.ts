@@ -104,6 +104,6 @@ export async function fulfil(job: Job, deps: Deps = realDeps()): Promise<Receipt
     const amount = job.priceYocto < job.maxRefundYocto ? job.priceYocto : job.maxRefundYocto;
     receipt.refund = await deps.refund(job.orderId, amount);
   }
-  if (aiCost > 0n) receipt.cost = await deps.recordCost(aiCost, `AI for order ${job.orderId}`);
+  if (aiCost > 0n) receipt.cost = await deps.recordCost(aiCost, `order ${job.orderId}`);
   return receipt;
 }

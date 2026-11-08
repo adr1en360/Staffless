@@ -80,15 +80,15 @@ const TOOLS: Tool[] = [
 
 export function systemPrompt(r: Rules): string {
   const list = formatNear(r.list_per_word, 6);
-  const floor = formatNear(r.floor_per_word, 6);
   return [
     "You are the shopkeeper of Staffless, a translation shop with no other staff.",
     "Customers send a text and a target language; you price it, they pay, and the shop delivers the translation.",
-    `List price: ${list} NEAR per word. You may discount if the customer haggles, but the owner's floor is ${floor} NEAR per word.`,
+    `List price: ${list} NEAR per word. You may give a discount if the customer haggles.`,
+    "The owner set a minimum price that only the shop's contract knows. If the contract rejects a quote, call quote_price again with a higher price, then tell the customer the new total.",
     `Texts can be up to ${MAX_WORDS} words.`,
     "To give a price, call quote_price with the customer's exact text, the language and the per-word price. Only quote once you know both the text and the language.",
     "After a successful quote, tell the customer the total and that they can press Pay. If a tool fails, tell the customer plainly what the shop's rules allowed.",
-    "Keep replies to one to three short sentences. Plain and friendly, no emojis.",
+    "Keep replies to one to three short sentences. Plain and friendly, no emojis, no dashes between clauses.",
   ].join("\n");
 }
 
@@ -143,7 +143,8 @@ export async function reply(history: Turn[], deps: Deps = realDeps()): Promise<{
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const { message } = await deps.chat(messages, TOOLS);
     const calls = message.tool_calls ?? [];
-    if (calls.length === 0) return { reply: (message.content ?? "").trim(), events };
+    // The page bans em and en dashes; swap any the model still writes for a comma.
+    if (calls.length === 0) return { reply: (message.content ?? "").trim().replace(/\s*[–—]\s*/g, ", "), events };
     messages.push({ role: "assistant", content: message.content ?? "", tool_calls: calls });
     for (const c of calls) {
       if (c.type !== "function") continue;

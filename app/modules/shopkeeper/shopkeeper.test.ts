@@ -85,3 +85,9 @@ test("a junk amount from the model becomes a tool error, not a crash", async () 
   const r = await reply([{ role: "user", content: "refund me lots" }], d);
   assert.equal(r.reply, "I couldn't process that refund.");
 });
+
+test("dashes in the model's reply become commas", async () => {
+  const d = deps([{ text: "Too low — I can do 0.00015 instead." }]);
+  const r = await reply([{ role: "user", content: "cheaper?" }], d);
+  assert.equal(r.reply, "Too low, I can do 0.00015 instead.");
+});
