@@ -13,6 +13,7 @@
     "demo:attacks": "tsx --env-file=../.env scripts/demo-attacks.ts"
   },
   "dependencies": {
+    "@next/env": "16.4.5",
     "near-api-js": "7.4.0",
     "next": "16.4.5",
     "openai": "7.53.0",
