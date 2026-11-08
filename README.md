@@ -74,7 +74,7 @@ Expected: the rules (floor `100000000000000000000` yoctoNEAR a word, and so on) 
 
 ### 4. Run the demos on testnet (needs your own accounts)
 
-The demos sign transactions, so they need keys. Ours are private: to run them yourself, create testnet accounts, build and deploy `contract/` (`cargo near build non-reproducible-wasm --no-abi`, then `near contract deploy ... with-init-call new`, passing owner, shopkeeper, contributor and rules), give the shopkeeper a function-call key for the five shop methods, and fill `.env` from `.env.example`, including a NEAR AI Cloud API key. The demo video shows all three running against `store.staffless.testnet`. From `app/`:
+The demos sign transactions, so they need keys. Ours are private: to run them yourself, create testnet accounts, build and deploy `contract/` (`cargo near build non-reproducible-wasm --no-abi`, then `near contract deploy ... with-init-call new`, passing owner, shopkeeper, contributor and rules), give the shopkeeper a function-call key for the five shop methods, and fill `.env` from `.env.example`, including a NEAR AI Cloud API key. The demo video shows a full order in the website and the real output of `demo:attacks` and `demo:agent`, all against `store.staffless.testnet`. From `app/`:
 
 | Command | What you see |
 |---|---|
@@ -104,7 +104,7 @@ app/scripts/    the three demos
 
 ## Scope of this build
 
-Built in 6 days for $0, on testnet. Each choice below has a direct upgrade path; none of them lets the AI move money outside the owner's rules.
+Built during NEAR HACKATHON for $0, on testnet. Each choice below has a direct upgrade path; none of them lets the AI move money outside the owner's rules.
 
 - **Testnet NEAR, not a stablecoin.** Next: NEP-141 USDC through `ft_transfer_call`.
 - **One shared guest account pays for website orders**, so visitors need no wallet. Next: wallet login.
