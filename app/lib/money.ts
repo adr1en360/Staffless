@@ -17,3 +17,10 @@ export function formatNear(yocto: bigint | string, digits = 5): string {
 
 /** `part` of `total` as a fraction in basis points, rounded down. */
 export const bps = (total: bigint, points: number) => (total * BigInt(points)) / 10_000n;
+
+/** NEAR amounts the AI gives as JS numbers; 12 decimals avoids float noise like 0.0002 -> 0.000200000000000000009584. */
+export function fromNearNumber(n: unknown): bigint {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) throw new Error("amount must be a non-negative number");
+  return toYocto(v.toFixed(12));
+}

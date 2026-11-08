@@ -18,3 +18,10 @@ test("bps rounds down", () => {
   assert.equal(bps(100n, 6_000), 60n);
   assert.equal(bps(5n, 3_333), 1n);
 });
+
+test("fromNearNumber has no float noise and rejects junk", async () => {
+  const { fromNearNumber } = await import("./money");
+  assert.equal(fromNearNumber(0.0002), 200_000_000_000_000_000_000n);
+  assert.throws(() => fromNearNumber("abc"));
+  assert.throws(() => fromNearNumber(-1));
+});
