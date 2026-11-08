@@ -123,7 +123,7 @@ Function-call keys cannot attach deposits, so every shopkeeper method takes no d
 - `POST /api/tab/buy`: voucher + sentence in, translation out. Settles when unsettled ≥ threshold.
 - `POST /api/tab/settle`: final voucher at session end.
 - `POST /api/payout`
-- `POST /api/supplier/[id]/quote` and `POST /api/supplier/[id]/translate`: suppliers reached over HTTP, like real vendors.
+- Suppliers run in-process (`modules/suppliers`), each with its own NEAR account and price list. shortcut: no supplier HTTP API; add one if outside suppliers join.
 
 **Modules** (one per concept): `near` (the only place that talks RPC or signs), `shopkeeper`, `procurement`, `suppliers`, `tabs`.
 
